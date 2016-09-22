@@ -1,91 +1,99 @@
-const int TriggerPin_1 = 8; //Trig pin #1
-const int EchoPin_1 = 9; //Echo pin #1
-const int TriggerPin_2 = 12; // Trig pin #2
-const int EchoPin_2 = 11; //Echo pin #1
-long Duration_1 = 0;
-long Duration_2 = 0;
-
-unsigned long time;
+//unsigned long time;
 long time_initial = 0;
-long time_final = 0;  
+long time_final_1 = 0;  
+long time_final_2 = 0;
+int sw = 10;       // 스위치(SW) 핀 설정
+int led = 6;       // LED 핀 설정
+ 
+int state = LOW;      // LED 상태
+int reading;          // SW 상태
+int previous = LOW;   // SW 이전 상태
+ 
+long time = 0;        // LED가 ON/OFF 토글된 마지막 시간
+long debounce = 100;  // Debounce 타임 설정
 
 void setup() {
-  pinMode(TriggerPin_1, OUTPUT); // Trigger is an output pin
-  pinMode(EchoPin_2, INPUT); // Echo is an input pin
-  pinMode(TriggerPin_2, OUTPUT);
-  pinMode(EchoPin_2, INPUT);
-  Serial.begin(19200); // Serial Output
+  // initialize serial communication at 9600 bits per second:
+  Serial.begin(9600);
+  Serial.println("Start test");
+  
+  pinMode(sw, INPUT_PULLUP); // SW 를 설정, 아두이노 풀업저항 사용
+  pinMode(led, OUTPUT);      // LED 설정
 }
 
 void loop() {
-  if(time_initial == 0)
+  
+  reading = digitalRead(sw);  // SW 상태 읽음
+ 
+  //SW 가 눌려졌고 스위치 토글 눌림 경과시간이 Debounce 시간보다 크면 실행
+  if (reading == HIGH && previous == LOW && millis() - time > debounce) 
   {
-    digitalWrite(TriggerPin_1, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TriggerPin_1, HIGH); // Trigger pin to HIGH
-    delayMicroseconds(10); // 10us high
-    digitalWrite(TriggerPin_1, LOW); // Trigger pin to HIGH
-    
-    Duration_1 = pulseIn(EchoPin_1, HIGH); // Waits for the echo pin to get high
-    // returns the Duration in microseconds
-   
-    long Distance_1 = Distance(Duration_1);
-    
-    if(Distance_1 < 80)
+    if (state == HIGH)    // LED 가 HIGH 면 LOW 로 바꿔준다.
+      state = LOW;
+    else                  // LED 가 LOW 면 HIGH 로 바꿔준다.
     {
+      state = HIGH;
       time_initial = millis();
-      Serial.print("time_initial =");
-      Serial.println(time_initial);
     }
+    time = millis();
   }
 
-  if(time_final == 0)
+  digitalWrite(led, state);
+ 
+  previous = reading;
+
+  if(state == HIGH)
   {
-    digitalWrite(TriggerPin_2, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TriggerPin_2, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TriggerPin_2, LOW);
+//    Serial.print("time initial = ");
+//    Serial.println(time_initial);
     
-    Duration_2 = pulseIn(EchoPin_2, HIGH);
-    long Distance_2 = Distance(Duration_2);
-
-    if(Distance_2 < 80)
-    {
-      time_final = millis();
-      Serial.print("time_final =");
-      Serial.println(time_final);
-    }
+        if(time_final_1 == 0)
+      {
+          // read the input on analog pin 0:
+          int sensorValue = 0;
+          for (int x = 0 ; x < 6 ; x++)
+          {
+            sensorValue = sensorValue + analogRead(A0);
+          }
+          sensorValue = sensorValue / 6;
+          float Distance = pow((sensorValue / 1893.9), -1.087);   //This equation can vary from sensor to sensor
+      
+          if(Distance < 10)
+          {
+              time_final_1 = millis();
+              Serial.print("time_final 1 = ");
+              Serial.println(time_final_1);
+          } 
+          if((time_final_1 & time_initial) != 0)
+          {
+            Serial.print("time difference ="); 
+            Serial.println(time_final_1-time_initial);  
+          }
+      }
+    
+      if(time_final_2 == 0)
+      {
+          // read the input on analog pin 1:
+          int sensorValue = 0;
+          for (int x = 0 ; x < 6 ; x++)
+          {
+            sensorValue = sensorValue + analogRead(A1);
+          }
+          sensorValue = sensorValue / 6;
+          float Distance = pow((sensorValue / 1893.9), -1.087);   //This equation can vary from sensor to sensor
+      
+          if(Distance < 5)
+          {
+              time_final_2 = millis();
+              Serial.print("time_final 2 = ");
+              Serial.println(time_final_2);
+          } 
+          if((time_final_2 & time_initial) != 0)
+          {
+            Serial.print("time difference ="); 
+            Serial.println(time_final_2-time_initial);  
+          }
+      }
   }
 
-  
-  
-  if(time_final-time_initial != 0)
-  {
-    Serial.println(time_final-time_initial);  
-  }
-  
-  delay(50); // Wait to do next measurement
-}
-
-long Distance(long time)
-{
-  // Calculates the Distance in mm
-  // ((time)*(Speed of sound))/ toward and backward of object) * 10
-
-  long DistanceCalc; // Calculation variable
-  DistanceCalc = ((time / 2.9) / 2); // Actual calculation in mm
-  //DistanceCalc = time / 74 / 2; // Actual calculation in inches
-  return DistanceCalc; // return calculated value
-}
-
-long Distance_2(long time)
-{
-  // Calculates the Distance in mm
-  // ((time)*(Speed of sound))/ toward and backward of object) * 10
-
-  long DistanceCalc_2; // Calculation variable
-  DistanceCalc_2 = ((time / 2.9) / 2); // Actual calculation in mm
-  //DistanceCalc_2 = time / 74 / 2; // Actual calculation in inches
-  return DistanceCalc_2; // return calculated value
 }
